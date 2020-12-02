@@ -20,37 +20,34 @@ import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
 
 @RunWith(MockitoJUnitRunner::class)
-class ObserveTeamDetailsUseCaseTest : BaseTest() {
+class ObserveTeamsUseCaseTest : BaseTest() {
 
-    private lateinit var observeTeamDetailsUseCase: ObserveTeamDetailsUseCase
+    private lateinit var observeTeamsUseCase: ObserveTeamsUseCase
 
     private val repository: Repository = mock()
     private val errorHandler: ErrorHandler = mock()
 
-    private val teamModel = TeamModel(1, "aa", true, "male", "desc", "url")
+    private val teamsResult = listOf(TeamModel(1, "aa", true, "male", "desc", "url"))
 
     @Before
     fun setUp() {
-        observeTeamDetailsUseCase =
-            ObserveTeamDetailsUseCase(errorHandler, dispatcherProvider, repository)
+        observeTeamsUseCase =
+            ObserveTeamsUseCase(errorHandler, dispatcherProvider, repository)
     }
 
     @Test
     fun `observe team details success`() {
         testCoroutineRule.runBlockingTest {
-            val id = teamModel.id
 
-            whenever(repository.observeTeamDetails(id)).thenReturn(teamModel.asFlow())
+            whenever(repository.observeTeams()).thenReturn(teamsResult.asFlow())
 
-            val result =
-                observeTeamDetailsUseCase.invoke(ObserveTeamDetailsUseCase.Params(teamModel.id))
-                    .first()
+            val result = observeTeamsUseCase.invoke(Unit).first()
 
             Assert.assertFalse(result is DataResult.Failure)
-            val team = (result as DataResult.Success).data
+            val teams = (result as DataResult.Success).data
 
-            Assert.assertNotNull(team)
-            Assert.assertEquals(team.id, teamModel.id)
+            Assert.assertTrue(teams.isNotEmpty())
+            Assert.assertEquals(teams[0].id, teamsResult[0].id)
         }
     }
 
@@ -66,11 +63,9 @@ class ObserveTeamDetailsUseCaseTest : BaseTest() {
                 )
             )
 
-            whenever(repository.observeTeamDetails(teamModel.id)).doReturn(flow { throw NullPointerException() })
+            whenever(repository.observeTeams()).doReturn(flow { throw NullPointerException() })
 
-            val result =
-                observeTeamDetailsUseCase.invoke(ObserveTeamDetailsUseCase.Params(teamModel.id))
-                    .first()
+            val result = observeTeamsUseCase.invoke(Unit).first()
             Assert.assertTrue(result is DataResult.Failure)
             val failure = result as DataResult.Failure
             Assert.assertEquals(message, failure.exception.message)
